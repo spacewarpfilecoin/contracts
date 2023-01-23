@@ -20,6 +20,7 @@ contract LogisticsTracker is ERC721, Pausable, Ownable {
         uint8 status;
     }
 
+    //Shipment id
     uint256 id;
 
     //TODO: Change to private
@@ -91,7 +92,7 @@ contract LogisticsTracker is ERC721, Pausable, Ownable {
 
         _safeMint(_receiver, id-1);
 
-        emit OrderCreated(_receiver, _sender, _deliveryCoordinates, id);
+        emit OrderCreated(_receiver, _sender, _deliveryCoordinates, id-1);
 
         return id-1;
     }
