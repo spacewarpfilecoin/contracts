@@ -7,6 +7,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 
 
 //QUESTION: Is it neccesary to have the NFT minted?
+//ADD: Mint status --> Req(mint) in createOrder
 
 contract LogisticsTracker is ERC721, Pausable, Ownable {
     constructor() ERC721("Logistics Tracker", "LTR") {}
@@ -31,13 +32,15 @@ contract LogisticsTracker is ERC721, Pausable, Ownable {
 
     mapping (uint256 => uint256[]) private trackerTimeHistory;
 
-    //1=>On transit 2=> Wharehouse 3=> Delivered
+    //1=>On transit 2=> Wharehouse 3=> Try to deliver 4=Delivered
     mapping (uint256 => uint8[]) private trackerStatusHistory;
 
     mapping (address => uint256[]) private authorizedShipments;
 
     //TODO: Change to private
     mapping (address => bool) public authorized;
+
+    mapping(address => mapping(address => bool)) ApprovedForDelivery;
 
     //Modifier that allows to call the function only to Sender or Receiver of the shipment
     modifier OnlySenderReceiverOrAuthorized(uint256 _id)
@@ -53,9 +56,17 @@ contract LogisticsTracker is ERC721, Pausable, Ownable {
         _;
     } 
 
+    modifier ReceiverOrApproved(uint256 _id)
+    {
+        require(msg.sender == trackers[_id].receiver || ApprovedForDelivery[trackers[_id].receiver][msg.sender]);
+        _;
+    }
+
     event OrderCreated(address indexed receiver, address sender, bytes32 deliveryCoordinates, uint256 indexed id); 
 
     event TrackerUpdated(uint256 indexed id, bytes32 indexed coordinates, uint8 status); 
+
+    event ApprovalForDelivery(address indexed owner, address indexed operator, bool approved);
 
     //Pause the smart contract
     function pause() public onlyOwner {
@@ -71,6 +82,15 @@ contract LogisticsTracker is ERC721, Pausable, Ownable {
     function setAuthorized(address addr, bool val) public onlyOwner{
         authorized[addr] = val;
     }
+
+    //Set approved addreses to confirm delivery
+    function setDeliveryApproval(address operator, bool approved) public {
+        require(msg.sender != operator, "The operator should be different address");
+        ApprovedForDelivery[msg.sender][operator] = approved;
+
+        emit ApprovalForDelivery(msg.sender, operator, approved);
+
+    } 
 
     //create the order when it is loaded
     function createOrder(address _receiver, address _sender, bytes32 _deliveryCoordinates, bytes32 shipmentCoordinates ) public Authorized() returns (uint256) {
@@ -99,12 +119,13 @@ contract LogisticsTracker is ERC721, Pausable, Ownable {
 
     //Update tracker history with the new location coordinates
     function updateTracker(uint256 _id, bytes32 coordinates, uint8 status) public Authorized() {
-        //CHECK: could we addif coordinates == to deliveryCoordinates "State: Delivered"
+        require(status == 1 || status ==2 || status == 3);
+
         trackerLocationHistory[_id].push(coordinates);
         trackerTimeHistory[_id].push(block.timestamp);
         trackerStatusHistory[_id].push(status);
 
-        trackers[id].status = status;
+        trackers[_id].status = status;
 
         emit TrackerUpdated(_id, coordinates, status); 
     }
@@ -126,6 +147,10 @@ contract LogisticsTracker is ERC721, Pausable, Ownable {
 
     }
 
+    function confirmDelivery(uint256 _id) public ReceiverOrApproved(_id){
+        trackers[_id].status = 4;
+        trackerStatusHistory[_id].push(4);
+    }
 
     // Sould bound tokens --> Block token transfers
     function _beforeTokenTransfer(
@@ -137,4 +162,8 @@ contract LogisticsTracker is ERC721, Pausable, Ownable {
     require(from == address(0), "Err: token transfer is BLOCKED");   
     super._beforeTokenTransfer(from, to, tokenId, batchSize);  
     }
+
+    
+
+    
 }
