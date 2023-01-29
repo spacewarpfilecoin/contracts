@@ -28,7 +28,6 @@ contract RawData {
         return coordinates;
     }
 
-
     //Input coordinates with format xxx.xxxxx,yyy.yyyyy
     function stringToBytes32(string memory source) public pure returns (bytes32 result) {
     bytes memory tempEmptyStringTest = bytes(source);

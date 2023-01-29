@@ -1,17 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
-import "@openzeppelin/contracts/security/Pausable.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 
-//QUESTION: Is it neccesary to have the NFT minted?
-//ADD: Mint status --> Req(mint) in createOrder
-
-contract LogisticsTracker is ERC721, Pausable, Ownable {
-    constructor() ERC721("Logistics Tracker", "LTR") {}
-
+contract LogisticsTracker is Ownable {
+    constructor()  {}
 
     struct tracker {
         address receiver;
@@ -23,6 +17,8 @@ contract LogisticsTracker is ERC721, Pausable, Ownable {
 
     //Shipment id
     uint256 id;
+
+    bool public paused;
 
     //TODO: Change to private
     mapping (uint256 => tracker) public trackers;
@@ -68,19 +64,15 @@ contract LogisticsTracker is ERC721, Pausable, Ownable {
 
     event ApprovalForDelivery(address indexed owner, address indexed operator, bool approved);
 
-    //Pause the smart contract
-    function pause() public onlyOwner {
-        _pause();
-    }
-
-    //Unpause the smart contract
-    function unpause() public onlyOwner {
-        _unpause();
-    }
 
     //Set mapping authorized
     function setAuthorized(address addr, bool val) public onlyOwner{
         authorized[addr] = val;
+    }
+
+    //Puse and unpause the create order
+    function setPaused(bool val) public onlyOwner{
+        paused = val;
     }
 
     //Set approved addreses to confirm delivery
@@ -94,6 +86,7 @@ contract LogisticsTracker is ERC721, Pausable, Ownable {
 
     //create the order when it is loaded
     function createOrder(address _receiver, address _sender, bytes32 _deliveryCoordinates, bytes32 shipmentCoordinates ) public Authorized() returns (uint256) {
+        require (!paused, "Create orders is paused");
 
         trackers[id].receiver = _receiver;
         trackers[id].sender = _sender;
@@ -109,8 +102,6 @@ contract LogisticsTracker is ERC721, Pausable, Ownable {
         
 
         id++;
-
-        _safeMint(_receiver, id-1);
 
         emit OrderCreated(_receiver, _sender, _deliveryCoordinates, id-1);
 
@@ -151,19 +142,5 @@ contract LogisticsTracker is ERC721, Pausable, Ownable {
         trackers[_id].status = 4;
         trackerStatusHistory[_id].push(4);
     }
-
-    // Sould bound tokens --> Block token transfers
-    function _beforeTokenTransfer(
-        address from,
-        address to,
-        uint256 tokenId, /* firstTokenId */
-        uint256 batchSize
-    ) internal whenNotPaused virtual override{
-    require(from == address(0), "Err: token transfer is BLOCKED");   
-    super._beforeTokenTransfer(from, to, tokenId, batchSize);  
-    }
-
-    
-
     
 }
