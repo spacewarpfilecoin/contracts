@@ -20,10 +20,8 @@ contract LogisticsTracker is Ownable {
 
     bool public paused;
 
-    //TODO: Change to private
-    mapping (uint256 => tracker) public trackers;
+    mapping (uint256 => tracker) private trackers;
 
-    //CHECK: Can we use another variable type for the array (bytes32 is the coordinates in string to bytes32)
     mapping (uint256 => bytes32[]) private trackerLocationHistory;
 
     mapping (uint256 => uint256[]) private trackerTimeHistory;
@@ -33,8 +31,7 @@ contract LogisticsTracker is Ownable {
 
     mapping (address => uint256[]) private authorizedShipments;
 
-    //TODO: Change to private
-    mapping (address => bool) public authorized;
+    mapping (address => bool) private authorized;
 
     mapping(address => mapping(address => bool)) ApprovedForDelivery;
 
